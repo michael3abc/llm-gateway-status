@@ -1,3 +1,11 @@
 {
-  "incidents": []
+  "incidents": [
+    {
+      "id": "20261121T160015Z",
+      "time": "2026-11-21T16:00:15Z",
+      "status": "operational",
+      "title": "Status page launched",
+      "message": "First status report. Automated reporting from the gateway is not connected yet; this entry was published manually via scripts/update_status.py."
+    }
+  ]
 }
