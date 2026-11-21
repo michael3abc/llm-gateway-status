@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="referrer" content="no-referrer">
+<title>LLM Gateway Status</title>
+<meta name="description" content="Public status, 90-day history and incident log for the LLM Gateway service.">
+<style>
+:root {
+  --bg: #f6f8fa;
+  --card: #ffffff;
+  --text: #1f2328;
+  --muted: #59636e;
+  --border: #d1d9e0;
+  --operational: #1a7f37;
+  --degraded: #bf8700;
+  --down: #cf222e;
+  --unknown: #8c959f;
+  --none: #d8dee4;
+  --on-status: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --card: #151b23;
+    --text: #e6edf3;
+    --muted: #9198a1;
+    --border: #3d444d;
+    --operational: #3fb950;
+    --degraded: #d29922;
+    --down: #f85149;
+    --unknown: #6e7681;
+    --none: #2a313c;
+    --on-status: #0d1117;
+  }
+}
+* { box-sizing: border-box; }
+html { color-scheme: light dark; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+}
+main { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 1.5rem; margin: 0 0 4px; }
+h2 { font-size: 1.15rem; margin: 0 0 12px; }
+.sub { color: var(--muted); margin: 0 0 20px; font-size: .9rem; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.banner {
+  display: flex; align-items: center; gap: 12px;
+  border-radius: 8px; padding: 16px; margin-bottom: 16px;
+  color: var(--on-status); background: var(--unknown);
+}
+.banner.operational { background: var(--operational); }
+.banner.degraded { background: var(--degraded); }
+.banner.down { background: var(--down); }
+.banner .icon { font-size: 1.6rem; line-height: 1; font-weight: 700; }
+.banner .label { font-size: 1.25rem; font-weight: 700; margin: 0; }
+.banner .msg { margin: 2px 0 0; font-size: .95rem; }
+.meta { color: var(--muted); font-size: .85rem; margin: 8px 0 0; }
+.bars { display: flex; gap: 2px; height: 36px; align-items: stretch; }
+.bar { flex: 1 1 0; min-width: 0; border-radius: 2px; background: var(--none); }
+.bar.operational { background: var(--operational); }
+.bar.degraded {
+  background: repeating-linear-gradient(45deg, var(--degraded) 0 3px, transparent 3px 5px), var(--degraded);
+  background-blend-mode: normal;
+  opacity: .9;
+}
+.bar.down { background: var(--down); }
+.bar:hover, .bar:focus { outline: 2px solid var(--text); outline-offset: 1px; }
+.axis { display: flex; justify-content: space-between; color: var(--muted); font-size: .8rem; margin-top: 6px; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0 0; padding: 0; list-style: none; font-size: .85rem; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.tip { min-height: 1.4em; margin: 8px 0 0; font-size: .85rem; color: var(--muted); }
+.incident { padding: 12px 0; border-top: 1px solid var(--border); }
+.incident:first-child { border-top: 0; padding-top: 0; }
+.incident h3 { font-size: 1rem; margin: 0; }
+.incident .when { color: var(--muted); font-size: .85rem; }
+.incident p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.pill {
+  display: inline-block; border-radius: 999px; padding: 0 8px; margin-right: 6px;
+  font-size: .75rem; font-weight: 600; color: var(--on-status); background: var(--unknown);
+  vertical-align: 1px;
+}
+.pill.operational { background: var(--operational); }
+.pill.degraded { background: var(--degraded); }
+.pill.down { background: var(--down); }
+.empty, .err { color: var(--muted); margin: 0; }
+.err { color: var(--down); }
+footer { color: var(--muted); font-size: .8rem; text-align: center; margin-top: 24px; }
+footer a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+  <h1>LLM Gateway Status</h1>
+  <p class="sub">Current service status, 90-day history and incident log. All times are UTC.</p>
+
+  <div id="banner" class="banner" role="status" aria-live="polite">
+    <span class="icon" id="banner-icon" aria-hidden="true">?</span>
+    <div>
+      <p class="label" id="banner-label">Loading status…</p>
+      <p class="msg" id="banner-msg"></p>
+    </div>
+  </div>
+  <p class="meta" id="banner-meta"></p>
+
+  <section class="card" aria-labelledby="hist-h" style="margin-top:16px">
+    <h2 id="hist-h">Last 90 days</h2>
+    <div id="bars" class="bars" role="list" aria-label="Daily status for the last 90 days"></div>
+    <div class="axis"><span id="axis-start"></span><span id="uptime"></span><span>Today</span></div>
+    <p class="tip" id="tip" aria-live="polite">Hover or focus a bar for details.</p>
+    <ul class="legend">
+      <li><i style="background:var(--operational)"></i>Operational</li>
+      <li><i style="background:var(--degraded)"></i>Degraded</li>
+      <li><i style="background:var(--down)"></i>Down</li>
+      <li><i style="background:var(--none)"></i>No data</li>
+    </ul>
+  </section>
+
+  <section class="card" aria-labelledby="inc-h">
+    <h2 id="inc-h">Incident log</h2>
+    <div id="incidents"><p class="empty">Loading…</p></div>
+  </section>
+
+  <noscript><p class="card">This page needs JavaScript to render. The raw data is in
+    <a href="data/status.json">status.json</a>, <a href="data/history.json">history.json</a> and
+    <a href="data/incidents.json">incidents.json</a>.</p></noscript>
+
+  <footer>Static page. No analytics, no cookies, no third-party scripts.
+    Data: <a href="data/status.json">status</a> · <a href="data/history.json">history</a> · <a href="data/incidents.json">incidents</a></footer>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var LABEL = { operational: "Operational", degraded: "Degraded", down: "Down", unknown: "No report yet" };
+  var ICON = { operational: "✓", degraded: "!", down: "✕", unknown: "?" };
+  var RANK = { operational: 0, degraded: 1, down: 2 };
+  var DAYS = 90, MAX_INCIDENTS = 50;
+
+  function $(id) { return document.getElementById(id); }
+  function norm(s) { return Object.prototype.hasOwnProperty.call(LABEL, s) ? s : "unknown"; }
+  function load(path) {
+    return fetch(path, { cache: "no-store" }).then(function (r) {
+      if (!r.ok) throw new Error(path + " → HTTP " + r.status);
+      return r.json();
+    });
+  }
+  function ymd(d) { return d.toISOString().slice(0, 10); }
+  function fmt(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return String(iso);
+    return d.toISOString().replace("T", " ").slice(0, 16) + " UTC";
+  }
+  function ago(iso) {
+    var ms = Date.now() - new Date(iso).getTime();
+    if (isNaN(ms) || ms < 0) return "";
+    var m = Math.floor(ms / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return m + " min ago";
+    var h = Math.floor(m / 60);
+    if (h < 48) return h + " h ago";
+    return Math.floor(h / 24) + " days ago";
+  }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  function renderStatus(s) {
+    var st = norm(s && s.status);
+    $("banner").className = "banner " + st;
+    $("banner-icon").textContent = ICON[st];
+    $("banner-label").textContent = st === "unknown" ? LABEL.unknown : "Gateway is " + LABEL[st].toLowerCase();
+    $("banner-msg").textContent = (s && s.message) || "";
+    var meta = "";
+    if (s && s.updated_at) {
+      meta = "Last updated " + fmt(s.updated_at) + " (" + ago(s.updated_at) + ")";
+      var age = Date.now() - new Date(s.updated_at).getTime();
+      if (age > 24 * 3600 * 1000) meta += " — no update for over 24 hours; status may be stale.";
+    }
+    $("banner-meta").textContent = meta;
+    document.title = (st === "unknown" ? "" : LABEL[st] + " · ") + "LLM Gateway Status";
+  }
+
+  function renderHistory(h) {
+    var days = (h && h.days) || {};
+    var box = $("bars"), tip = $("tip");
+    box.textContent = "";
+    var today = new Date(ymd(new Date()) + "T00:00:00Z");
+    var withData = 0, ok = 0, first = null;
+    for (var i = DAYS - 1; i >= 0; i--) {
+      var d = new Date(today.getTime() - i * 86400000);
+      var key = ymd(d);
+      var entry = days[key];
+      var st = entry && Object.prototype.hasOwnProperty.call(RANK, entry.status) ? entry.status : null;
+      if (first === null) first = key;
+      if (st) { withData++; if (st === "operational") ok++; }
+      var text = key + ": " + (st ? LABEL[st] : "No data");
+      if (entry && entry.note) text += " — " + entry.note;
+      var b = el("div", "bar" + (st ? " " + st : ""));
+      b.setAttribute("role", "listitem");
+      b.setAttribute("tabindex", "0");
+      b.setAttribute("aria-label", text);
+      b.title = text;
+      (function (t) {
+        var show = function () { tip.textContent = t; };
+        b.addEventListener("mouseenter", show);
+        b.addEventListener("focus", show);
+        b.addEventListener("click", show);
+      })(text);
+      box.appendChild(b);
+    }
+    $("axis-start").textContent = first || "";
+    $("uptime").textContent = withData
+      ? (Math.round(ok / withData * 1000) / 10) + "% of reported days fully operational (" + withData + " days)"
+      : "No data yet";
+  }
+
+  function renderIncidents(data) {
+    var box = $("incidents");
+    box.textContent = "";
+    var list = ((data && data.incidents) || []).slice().sort(function (a, b) {
+      return String(b.time).localeCompare(String(a.time));
+    }).slice(0, MAX_INCIDENTS);
+    if (!list.length) { box.appendChild(el("p", "empty", "No incidents recorded.")); return; }
+    list.forEach(function (it) {
+      var st = norm(it.status);
+      var wrap = el("article", "incident");
+      var h = el("h3");
+      h.appendChild(el("span", "pill " + st, LABEL[st]));
+      h.appendChild(document.createTextNode(it.title || "Status update"));
+      wrap.appendChild(h);
+      wrap.appendChild(el("div", "when", fmt(it.time)));
+      if (it.message) wrap.appendChild(el("p", null, it.message));
+      box.appendChild(wrap);
+    });
+  }
+
+  function fail(id, err) {
+    var box = $(id);
+    box.textContent = "";
+    box.appendChild(el("p", "err", "Could not load data (" + err.message + ")."));
+  }
+
+  load("data/status.json").then(renderStatus).catch(function (e) {
+    $("banner-label").textContent = "Status unavailable";
+    $("banner-msg").textContent = e.message;
+  });
+  load("data/history.json").then(renderHistory).catch(function (e) { fail("bars", e); });
+  load("data/incidents.json").then(renderIncidents).catch(function (e) { fail("incidents", e); });
+})();
+</script>
+</body>
+</html>
