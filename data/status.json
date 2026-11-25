@@ -1,5 +1,5 @@
 {
   "status": "operational",
-  "updated_at": "2026-11-21T16:00:15Z",
+  "updated_at": "2026-11-25T09:08:25Z",
   "message": "First status report. Automated reporting from the gateway is not connected yet; this entry was published manually via scripts/update_status.py."
 }
